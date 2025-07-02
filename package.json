@@ -1,19 +1,42 @@
 {
-  "name": "user-migration",
-  "version": "1.0.0",
-  "description": "",
-  "main": "src/index.js",
-  "scripts": {
-    "test": "jest"
+  "name": "paraluni-user-migration",
+  "version": "0.1.0",
+  "description": "User migration script for ParaLuni",
+  "publishConfig": {
+    "access": "public"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "test": "jest",
+    "start": "npx serve dist",
+    "dev": "npx serve",
+    "build": "esbuild src/index.js --bundle --outfile=dist/bundle.js",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "keywords": [
+    "paraluni",
+    "migration",
+    "defi"
+  ],
+  "author": "hsn",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "ethers": "^6.14.4"
   },
   "devDependencies": {
-    "jest": "^30.0.3"
+    "esbuild": "^0.25.5",
+    "jest": "^30.0.3",
+    "serve": "^14.2.0"
   }
 }

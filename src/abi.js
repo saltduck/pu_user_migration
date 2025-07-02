@@ -1,3 +1,6 @@
+// Description: ABIs for ParaLuni contracts
+// Author: hsn
+// Date: 2024-07-29
 
 const MASTERCHEF_ABI = [
     {
@@ -1996,6 +1999,19 @@ const SOUSCHEF_ABI = [
       "name": "paraRouter",
       "outputs": [
         {
+          "internalType": "contract IParaRouter02",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "paraSwapV3",
+      "outputs": [
+        {
           "internalType": "address",
           "name": "",
           "type": "address"
@@ -2006,12 +2022,12 @@ const SOUSCHEF_ABI = [
     },
     {
       "inputs": [],
-      "name": "paused",
+      "name": "pendingOwner",
       "outputs": [
         {
-          "internalType": "bool",
+          "internalType": "address",
           "name": "",
-          "type": "bool"
+          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -2026,7 +2042,7 @@ const SOUSCHEF_ABI = [
         },
         {
           "internalType": "address",
-          "name": "addr",
+          "name": "user",
           "type": "address"
         }
       ],
@@ -2034,98 +2050,11 @@ const SOUSCHEF_ABI = [
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "pending",
+          "name": "",
           "type": "uint256"
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "components": [
-            {
-              "internalType": "contract IERC20",
-              "name": "token",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "poolType",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "minDeposit",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "startBlock",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "claimDirectPercent",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "allocPoint",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "redemptionDelay",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "redemptionPeriod",
-              "type": "uint256"
-            },
-            {
-              "components": [
-                {
-                  "internalType": "uint256",
-                  "name": "deposit",
-                  "type": "uint256"
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "accV42PerShare",
-                  "type": "uint256"
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "lastRewardBlock",
-                  "type": "uint256"
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "__rewardDirect__",
-                  "type": "uint256"
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "__rewardLp__",
-                  "type": "uint256"
-                }
-              ],
-              "internalType": "struct ISousChefStruct.PoolMore",
-              "name": "more",
-              "type": "tuple"
-            }
-          ],
-          "internalType": "struct ISousChefStruct.Pool[]",
-          "name": "_pools",
-          "type": "tuple[]"
-        }
-      ],
-      "name": "poolAdd",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -2139,111 +2068,6 @@ const SOUSCHEF_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_pid",
-          "type": "uint256"
-        }
-      ],
-      "name": "poolMint",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "components": [
-            {
-              "internalType": "contract IERC20",
-              "name": "token",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "poolType",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "minDeposit",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "startBlock",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "claimDirectPercent",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "allocPoint",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "redemptionDelay",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "redemptionPeriod",
-              "type": "uint256"
-            },
-            {
-              "components": [
-                {
-                  "internalType": "uint256",
-                  "name": "deposit",
-                  "type": "uint256"
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "accV42PerShare",
-                  "type": "uint256"
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "lastRewardBlock",
-                  "type": "uint256"
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "__rewardDirect__",
-                  "type": "uint256"
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "__rewardLp__",
-                  "type": "uint256"
-                }
-              ],
-              "internalType": "struct ISousChefStruct.PoolMore",
-              "name": "more",
-              "type": "tuple"
-            }
-          ],
-          "internalType": "struct ISousChefStruct.Pool[]",
-          "name": "newPools",
-          "type": "tuple[]"
-        },
-        {
-          "internalType": "uint256[]",
-          "name": "pids",
-          "type": "uint256[]"
-        }
-      ],
-      "name": "poolUpdate",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -2268,22 +2092,22 @@ const SOUSCHEF_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "minDeposit",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "startBlock",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "claimDirectPercent",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
           "name": "allocPoint",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "lastRewardTime",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "accV42PerShare",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "totalDeposit",
           "type": "uint256"
         },
         {
@@ -2293,53 +2117,18 @@ const SOUSCHEF_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "redemptionPeriod",
+          "name": "withdrawFee",
           "type": "uint256"
         },
         {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "deposit",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "accV42PerShare",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "lastRewardBlock",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "__rewardDirect__",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "__rewardLp__",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct ISousChefStruct.PoolMore",
-          "name": "more",
-          "type": "tuple"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "porect",
-      "outputs": [
+          "internalType": "uint256",
+          "name": "emergencyFee",
+          "type": "uint256"
+        },
         {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
+          "internalType": "uint256",
+          "name": "performanceFee",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -2361,24 +2150,6 @@ const SOUSCHEF_ABI = [
     {
       "inputs": [],
       "name": "renounceOwnership",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "pid",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        }
-      ],
-      "name": "resetRegularUserPool",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -2418,44 +2189,6 @@ const SOUSCHEF_ABI = [
     },
     {
       "inputs": [
-        {
-          "internalType": "uint256[4]",
-          "name": "preTokensAmount_",
-          "type": "uint256[4]"
-        },
-        {
-          "internalType": "uint256",
-          "name": "pid",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address[2]",
-          "name": "tokens",
-          "type": "address[2]"
-        },
-        {
-          "internalType": "uint256[2]",
-          "name": "amountsForLp",
-          "type": "uint256[2]"
-        }
-      ],
-      "name": "safeDeposit",
-      "outputs": [],
-      "stateMutability": "payable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256[4]",
-          "name": "preTokensAmount_",
-          "type": "uint256[4]"
-        },
         {
           "internalType": "uint256",
           "name": "pid",
@@ -2508,27 +2241,9 @@ const SOUSCHEF_ABI = [
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "pid",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        }
-      ],
-      "name": "setMaturityFeeToken",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
+          "internalType": "uint8",
           "name": "t",
-          "type": "uint256"
+          "type": "uint8"
         },
         {
           "internalType": "address",
@@ -2545,16 +2260,16 @@ const SOUSCHEF_ABI = [
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "t",
+          "name": "pid",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "v",
+          "name": "allocPoint",
           "type": "uint256"
         }
       ],
-      "name": "setParamUint",
+      "name": "setPoolAllocPoint",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -2562,17 +2277,63 @@ const SOUSCHEF_ABI = [
     {
       "inputs": [
         {
-          "internalType": "uint256[]",
-          "name": "pids",
-          "type": "uint256[]"
+          "internalType": "uint256",
+          "name": "pid",
+          "type": "uint256"
         },
         {
-          "internalType": "uint256[]",
-          "name": "allocPoints",
-          "type": "uint256[]"
+          "internalType": "uint256",
+          "name": "redemptionDelay",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "withdrawFee",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "emergencyFee",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "performanceFee",
+          "type": "uint256"
         }
       ],
-      "name": "setPools",
+      "name": "setPoolConfig",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "pid",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "poolType",
+          "type": "uint256"
+        }
+      ],
+      "name": "setPoolType",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "rate",
+          "type": "uint256"
+        }
+      ],
+      "name": "setV42Rate",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -2601,6 +2362,19 @@ const SOUSCHEF_ABI = [
       "name": "transferOwnership",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "treasury",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -2662,12 +2436,12 @@ const SOUSCHEF_ABI = [
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "user",
           "type": "address"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "pid",
           "type": "uint256"
         }
       ],
@@ -2714,12 +2488,7 @@ const SOUSCHEF_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "__rewardDirect__",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "__rewardLp__",
+          "name": "lastRewardTime",
           "type": "uint256"
         }
       ],
@@ -2741,7 +2510,20 @@ const SOUSCHEF_ABI = [
     },
     {
       "inputs": [],
-      "name": "v42PerBlock",
+      "name": "v42PerSec",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "v42Rate",
       "outputs": [
         {
           "internalType": "uint256",
@@ -2784,23 +2566,6 @@ const SOUSCHEF_ABI = [
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "withdrawFeeRate",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "stateMutability": "payable",
-      "type": "receive"
     }
   ];
 
