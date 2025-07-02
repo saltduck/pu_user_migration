@@ -487,12 +487,15 @@ async function migrateSC(signer) {
 
       // Deposit to New SousChef if there's an amount to deposit
       if (amountToDeposit && amountToDeposit > 0n) {
+        // Special handling for PID 22: deposit to PID 54 instead
+        const targetPid = pid === 22 ? 54 : pid;
+        
         // Check if pool is active (allocPoint > 0)
-        const poolInfo = await retry(() => newSousChef.pools(pid));
+        const poolInfo = await retry(() => newSousChef.pools(targetPid));
         if (poolInfo.allocPoint.toString() === '0') {
-          console.log(`PID ${pid}: Pool allocPoint is 0, skipping deposit to new SousChef`);
+          console.log(`PID ${pid}: Target pool ${targetPid} allocPoint is 0, skipping deposit to new SousChef`);
         } else {
-          console.log(`PID ${pid}: Depositing ${ethers.formatUnits(amountToDeposit)} tokens to new SousChef...`);
+          console.log(`PID ${pid}: Depositing ${ethers.formatUnits(amountToDeposit)} tokens to new SousChef pool ${targetPid}...`);
           const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
           
           // Check current allowance
@@ -507,9 +510,9 @@ async function migrateSC(signer) {
           }
 
           await send(
-            () => newSousChef.deposit(pid, amountToDeposit, ["0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 0])
+            () => newSousChef.deposit(targetPid, amountToDeposit, ["0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 0])
           );
-          console.log(`PID ${pid}: Deposit to new SousChef complete.`);
+          console.log(`PID ${pid}: Deposit to new SousChef pool ${targetPid} complete.`);
         }
       }
       

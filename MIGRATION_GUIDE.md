@@ -67,6 +67,7 @@
     -   **如果不存在**: 继续执行下一步。
 3.  **提款 (Withdraw)**:
     -   检查用户在该池子中的质押数量 (`userPools.deposit`)。
+    -   如果是底池（poolType=4），首先检查当前时间是否达到userNoFeeTime，没达到则不提款。
     -   如果数量大于 0，则调用旧 SousChef 的 `withdraw` 函数。参数设置如下：
         -   `regularIds`: 如果 `poolType` 为 `1`，则通过 `getUserPoolRegular()` 获取；否则传空数组 `[]`。
         -   `isLp`: 始终为 `false`。
@@ -75,6 +76,7 @@
     -   **保存状态**: 将 `tokenAddress` 和获取到的 `amountToDeposit` 存入本地存储。
 4.  **存款 (Deposit)**:
     -   如果 `amountToDeposit` 大于 0，则执行存款操作。
+    -   **特殊处理**: 对于22号池，存款时不存入22号池，而是改存入54号池。
     -   调用代币合约的 `approve` 方法，授权新 SousChef 合约。
     -   调用新 SousChef 的 `deposit` 方法，存入代币。`tokens` 和 `amountsForLp` 参数均按要求设置为空值 (`[ethers.constants.AddressZero, ethers.constants.AddressZero], [0, 0]`)。
 5.  **计算并暂存奖励**:

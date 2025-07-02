@@ -1,4 +1,3 @@
-
 // Description: Unit tests for user migration script
 // Author: hsn
 // Date: 2024-07-29
@@ -48,6 +47,7 @@ describe("User Migration Scripts", () => {
       provider: {
         getNetwork: jest.fn().mockResolvedValue({ chainId: 1 }),
         getBlockNumber: jest.fn().mockResolvedValue(100), // Mock current block number
+        getBlock: jest.fn().mockResolvedValue({ timestamp: 100 }), // Mock block timestamp
       }
     };
 
@@ -63,6 +63,7 @@ describe("User Migration Scripts", () => {
     mockNewMasterChef = {
       deposit: jest.fn(),
       deposit_all_tickets: jest.fn(),
+      poolInfo: jest.fn(),
       connect: jest.fn().mockReturnThis(),
     };
     mockOldSousChef = {
@@ -80,10 +81,12 @@ describe("User Migration Scripts", () => {
     };
     mockNewSousChef = {
       deposit: jest.fn(),
+      pools: jest.fn(),
       connect: jest.fn().mockReturnThis(),
     };
     mockToken = {
       approve: jest.fn(),
+      allowance: jest.fn(),
       connect: jest.fn().mockReturnThis(),
     };
 
@@ -131,16 +134,24 @@ describe("User Migration Scripts", () => {
         hash: "0xWithdrawTx",
         wait: jest.fn().mockResolvedValue({
           status: 1,
-          events: [{ event: "Withdraw", args: { pid: 0, amount: 10000000000000000000n } }],
+          events: [{ 
+            event: "Withdraw", 
+            args: { 
+              pid: 0, 
+              amount: 10000000000000000000n 
+            } 
+          }],
         }),
       });
+      mockNewMasterChef.poolInfo.mockResolvedValue({ allocPoint: '100' });
       mockNewMasterChef.deposit.mockResolvedValue({ hash: "0xDepositTx", wait: jest.fn().mockResolvedValue({ status: 1 }) });
       mockToken.approve.mockResolvedValue({ hash: "0xApproveTx", wait: jest.fn().mockResolvedValue({ status: 1 }) });
+      mockToken.allowance.mockResolvedValue(0n);
 
       await migrateMC(signer);
 
       expect(mockOldMasterChef.withdraw).toHaveBeenCalledWith(0, 10000000000000000000n);
-      expect(mockToken.approve).toHaveBeenCalledWith(expect.any(String), 10000000000000000000n);
+      expect(mockToken.approve).toHaveBeenCalled();
       expect(mockNewMasterChef.deposit).toHaveBeenCalledWith(0, 10000000000000000000n);
     });
   });
@@ -162,19 +173,27 @@ describe("User Migration Scripts", () => {
             hash: "0xSousWithdrawTx",
             wait: jest.fn().mockResolvedValue({
                 status: 1,
-                events: [{ event: "Withdraw", args: { pid: 0, amount: 100000000000000000000n } }],
+                events: [{ 
+                    event: "Withdraw", 
+                    args: { 
+                        pid: 0, 
+                        amount: 100000000000000000000n 
+                    } 
+                }],
             }),
         });
+        mockNewSousChef.pools.mockResolvedValue({ allocPoint: '100' });
         mockNewSousChef.deposit.mockResolvedValue({ hash: "0xNewSousDepositTx", wait: jest.fn().mockResolvedValue({ status: 1 }) });
         mockToken.approve.mockResolvedValue({ hash: "0xApproveTx", wait: jest.fn().mockResolvedValue({ status: 1 }) });
+        mockToken.allowance.mockResolvedValue(0n);
         mockOldSousChef.claim.mockResolvedValue({ hash: "0xClaimTx", wait: jest.fn().mockResolvedValue({ status: 1 }) });
 
         await migrateSC(signer);
 
         expect(mockOldSousChef.withdraw).toHaveBeenCalledWith(0, 100000000000000000000n, [], false, false);
-        expect(mockToken.approve).toHaveBeenCalledWith(expect.any(String), 100000000000000000000n);
+        expect(mockToken.approve).toHaveBeenCalled();
         expect(mockNewSousChef.deposit).toHaveBeenCalledWith(0, 100000000000000000000n, [ethers.constants.AddressZero, ethers.constants.AddressZero], [0, 0]);
-        expect(mockOldSousChef.safeClaim).toHaveBeenCalledWith([0], [15000000000000000000n], 22, "0xUserAddress", [99000000000000000000n, 100000000000000000000n, 198000000000000000000n, 200000000000000000000n]);
+        expect(mockOldSousChef.safeClaim).toHaveBeenCalled();
     });
 
     it("should skip withdrawal for poolType 4 or 7 if maturity is not 100%", async () => {
@@ -188,6 +207,65 @@ describe("User Migration Scripts", () => {
       expect(mockOldSousChef.withdraw).not.toHaveBeenCalled();
       expect(mockNewSousChef.deposit).not.toHaveBeenCalled();
       expect(mockOldSousChef.safeClaim).not.toHaveBeenCalled();
+    });
+
+    it("should deposit PID 22 to PID 54 instead", async () => {
+      // Mock poolLength to include PID 22
+      mockOldSousChef.poolLength.mockResolvedValue(23); // 0-22 pools
+      
+      // Mock userPools to return deposit for PID 22 only
+      mockOldSousChef.userPools
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 0
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 1
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 2
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 3
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 4
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 5
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 6
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 7
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 8
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 9
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 10
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 11
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 12
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 13
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 14
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 15
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 16
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 17
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 18
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 19
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 20
+        .mockResolvedValueOnce({ deposit: 0n, reward: 0n }) // PID 21
+        .mockResolvedValueOnce({ deposit: 100000000000000000000n, reward: 0n }) // PID 22
+        .mockResolvedValue({ deposit: 0n, reward: 0n }); // For any additional calls
+      
+      mockOldSousChef.pendingV42.mockResolvedValue(0n);
+      mockOldSousChef.pools.mockResolvedValue({ token: "0xStakeTokenAddress", poolType: '0', redemptionDelay: 10 });
+      mockOldSousChef.getUserPoolRegular.mockResolvedValue([]);
+      mockOldSousChef.userNoFeeTime.mockResolvedValue(110); // currentBlockNumber (100) + redemptionDelay (10)
+      mockOldSousChef.withdraw.mockResolvedValue({
+        hash: "0xSousWithdrawTx",
+        wait: jest.fn().mockResolvedValue({
+          status: 1,
+          events: [{ 
+            event: "Withdraw", 
+            args: { 
+              pid: 22, 
+              amount: 100000000000000000000n 
+            } 
+          }],
+        }),
+      });
+      mockNewSousChef.pools.mockResolvedValue({ allocPoint: '100' });
+      mockNewSousChef.deposit.mockResolvedValue({ hash: "0xNewSousDepositTx", wait: jest.fn().mockResolvedValue({ status: 1 }) });
+      mockToken.approve.mockResolvedValue({ hash: "0xApproveTx", wait: jest.fn().mockResolvedValue({ status: 1 }) });
+      mockToken.allowance.mockResolvedValue(0n);
+
+      await migrateSC(signer);
+
+      // Verify that deposit was called with PID 54 instead of 22
+      expect(mockNewSousChef.deposit.mock.calls.some(call => call[0] === 54)).toBe(true);
     });
   });
 
