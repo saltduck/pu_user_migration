@@ -240,9 +240,20 @@ async function migrateMC(signer) {
         } else {
           const lpTokenContract = new ethers.Contract(lpTokenAddress, ERC20_ABI, signer);
           
+          // Check wallet balance before deposit
+          const walletBalance = await retry(() => lpTokenContract.balanceOf(userAddress));
+          const actualDepositAmount = walletBalance < amountToDeposit ? walletBalance : amountToDeposit;
+          
+          if (actualDepositAmount === 0n) {
+            console.log(`PID ${pid}: Wallet balance is 0, skipping deposit to new MasterChef`);
+            continue;
+          }
+          
+          console.log(`PID ${pid}: Wallet balance: ${ethers.formatUnits(walletBalance)}, intended deposit: ${ethers.formatUnits(amountToDeposit)}, actual deposit: ${ethers.formatUnits(actualDepositAmount)}`);
+          
           // Check current allowance
           const currentAllowance = await retry(() => lpTokenContract.allowance(userAddress, NEW_MASTERCHEF_ADDRESS));
-          if (currentAllowance < amountToDeposit) {
+          if (currentAllowance < actualDepositAmount) {
             console.log(`PID ${pid}: Current allowance ${ethers.formatUnits(currentAllowance)} is insufficient, approving...`);
             await send(
               () => lpTokenContract.approve(NEW_MASTERCHEF_ADDRESS, ethers.MaxUint256)
@@ -252,7 +263,7 @@ async function migrateMC(signer) {
           }
           
           await send(
-            () => newMasterChef.deposit(pid, amountToDeposit)
+            () => newMasterChef.deposit(pid, actualDepositAmount)
           );
         }
       }
@@ -495,12 +506,22 @@ async function migrateSC(signer) {
         if (poolInfo.allocPoint.toString() === '0') {
           console.log(`PID ${pid}: Target pool ${targetPid} allocPoint is 0, skipping deposit to new SousChef`);
         } else {
-          console.log(`PID ${pid}: Depositing ${ethers.formatUnits(amountToDeposit)} tokens to new SousChef pool ${targetPid}...`);
           const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+          
+          // Check wallet balance before deposit
+          const walletBalance = await retry(() => tokenContract.balanceOf(userAddress));
+          const actualDepositAmount = walletBalance < amountToDeposit ? walletBalance : amountToDeposit;
+          
+          if (actualDepositAmount === 0n) {
+            console.log(`PID ${pid}: Wallet balance is 0, skipping deposit to new SousChef`);
+            continue;
+          }
+          
+          console.log(`PID ${pid}: Wallet balance: ${ethers.formatUnits(walletBalance)}, intended deposit: ${ethers.formatUnits(amountToDeposit)}, actual deposit: ${ethers.formatUnits(actualDepositAmount)}`);
           
           // Check current allowance
           const currentAllowance = await retry(() => tokenContract.allowance(userAddress, NEW_SOUSCHEF_ADDRESS));
-          if (currentAllowance < amountToDeposit) {
+          if (currentAllowance < actualDepositAmount) {
             console.log(`PID ${pid}: Current allowance ${ethers.formatUnits(currentAllowance)} is insufficient, approving...`);
             await send(
               () => tokenContract.approve(NEW_SOUSCHEF_ADDRESS, ethers.MaxUint256)
@@ -510,7 +531,7 @@ async function migrateSC(signer) {
           }
 
           await send(
-            () => newSousChef.deposit(targetPid, amountToDeposit, ["0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 0])
+            () => newSousChef.deposit(targetPid, actualDepositAmount, ["0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 0])
           );
           console.log(`PID ${pid}: Deposit to new SousChef pool ${targetPid} complete.`);
         }
