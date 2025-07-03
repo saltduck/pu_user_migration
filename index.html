@@ -5,17 +5,131 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Migration</title>
     <style>
-        body { font-family: sans-serif; margin: 2em; }
-        #log { width: 100%; height: 400px; border: 1px solid #ccc; padding: 1em; overflow-y: scroll; white-space: pre-wrap; background-color: #f0f0f0; }
-        button { font-size: 1.2em; padding: 0.5em 1em; margin-bottom: 1em; cursor: pointer; }
-        button:disabled { cursor: not-allowed; opacity: 0.6; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 1em; 
+            max-width: 100%;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 1.5em;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 { 
+            text-align: center;
+            color: #333;
+            margin-bottom: 1.5em;
+        }
+        
+        #log { 
+            width: 100%; 
+            height: 300px; 
+            border: 1px solid #ddd; 
+            padding: 1em; 
+            overflow-y: scroll; 
+            white-space: pre-wrap; 
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        button { 
+            font-size: 1.1em; 
+            padding: 0.8em 1.5em; 
+            margin-bottom: 1em; 
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+        
+        #connectButton {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        #connectButton:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        
+        #migrateButton {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        #migrateButton:hover:not(:disabled) {
+            background-color: #1e7e34;
+        }
+        
+        button:disabled { 
+            cursor: not-allowed; 
+            opacity: 0.6; 
+            background-color: #6c757d !important;
+        }
+        
+        .status {
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 8px;
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+        }
+        
+        .error {
+            background-color: #ffeaea;
+            border-left-color: #dc3545;
+        }
+        
+        .success {
+            background-color: #e8f5e8;
+            border-left-color: #28a745;
+        }
+        
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            body {
+                margin: 0.5em;
+            }
+            
+            .container {
+                padding: 1em;
+                border-radius: 8px;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+            }
+            
+            #log {
+                height: 250px;
+                font-size: 11px;
+            }
+            
+            button {
+                font-size: 1em;
+                padding: 0.7em 1em;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>User Migration</h1>
-    <button id="connectButton">Connect Wallet</button>
-    <button id="migrateButton" disabled>Migrate All</button>
-    <textarea id="log" readonly></textarea>
+    <div class="container">
+        <h1>ParaLuni 用户迁移</h1>
+        <div id="status" class="status" style="display: none;"></div>
+        <button id="connectButton">连接钱包</button>
+        <button id="migrateButton" disabled>开始迁移</button>
+        <textarea id="log" readonly placeholder="迁移日志将在这里显示..."></textarea>
+    </div>
 
     <!-- Ethers.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.14.4/ethers.umd.min.js" type="application/javascript"></script>
@@ -28,6 +142,14 @@
         const log = document.getElementById('log');
         const connectButton = document.getElementById('connectButton');
         const migrateButton = document.getElementById('migrateButton');
+        const statusDiv = document.getElementById('status');
+
+        // 显示状态信息
+        function showStatus(message, type = 'info') {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+        }
 
         // Override console.log and console.error to write to the textarea
         const originalConsoleLog = console.log;
@@ -47,32 +169,46 @@
 
         connectButton.addEventListener('click', async () => {
             if (typeof window.ethereum === 'undefined') {
+                showStatus('未检测到钱包！请安装MetaMask或TokenPocket等钱包应用。', 'error');
                 return console.error('MetaMask is not installed!');
             }
+            
             try {
+                showStatus('正在连接钱包...', 'info');
                 const provider = new ethers.BrowserProvider(window.ethereum)
                 signer = await provider.getSigner();
                 const address = await signer.getAddress();
                 const network = await provider.getNetwork();
+                
                 console.log('Connected to network:', network.name, '(Chain ID:', network.chainId + ')');
                 console.log('Connected with address:', address);
-                connectButton.textContent = 'Connected';
+                
+                connectButton.textContent = '已连接';
                 connectButton.disabled = true;
                 migrateButton.disabled = false;
+                
+                showStatus(`已连接到 ${network.name} 网络，地址: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
             } catch (error) {
+                showStatus('连接钱包失败: ' + error.message, 'error');
                 console.error('Failed to connect wallet:', error);
             }
         });
 
         migrateButton.addEventListener('click', async () => {
             if (!signer) {
+                showStatus('请先连接钱包！', 'error');
                 return console.error('Please connect your wallet first.');
             }
+            
             migrateButton.disabled = true;
+            showStatus('正在执行迁移，请耐心等待...', 'info');
+            
             try {
                 // Access the migration functions from the global window object
                 await window.migration.migrate(signer);
+                showStatus('迁移完成！', 'success');
             } catch (error) {
+                showStatus('迁移失败: ' + error.message, 'error');
                 console.error('Migration failed:', error);
             }
             migrateButton.disabled = false;
