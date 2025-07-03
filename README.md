@@ -26,7 +26,7 @@ node src/index.js
 ### Run migration from the browser
 
 ```bash
-npm run dev
+npm run build && npm run dev
 ```
 
 Then open your browser to `http://localhost:3000`.
