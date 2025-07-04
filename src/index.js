@@ -244,8 +244,8 @@ async function migrateMC(signer) {
           const walletBalance = await retry(() => lpTokenContract.balanceOf(userAddress));
           const actualDepositAmount = walletBalance < amountToDeposit ? walletBalance : amountToDeposit;
           
-          if (actualDepositAmount === 0n) {
-            console.log(`PID ${pid}: Wallet balance is 0, skipping deposit to new MasterChef`);
+          if (actualDepositAmount <= 1n) {
+            console.log(`PID ${pid}: Wallet balance is <= 1, skipping deposit to new MasterChef`);
             continue;
           }
           
@@ -512,8 +512,8 @@ async function migrateSC(signer) {
           const walletBalance = await retry(() => tokenContract.balanceOf(userAddress));
           const actualDepositAmount = walletBalance < amountToDeposit ? walletBalance : amountToDeposit;
           
-          if (actualDepositAmount === 0n) {
-            console.log(`PID ${pid}: Wallet balance is 0, skipping deposit to new SousChef`);
+          if (actualDepositAmount <= 1n) {
+            console.log(`PID ${pid}: Wallet balance is <= 1, skipping deposit to new SousChef`);
             continue;
           }
           
