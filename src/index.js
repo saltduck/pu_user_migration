@@ -312,7 +312,7 @@ async function migrateSC(signer) {
         amountToDeposit = BigInt(pending.amount);
       } else {
         const userPoolInfo = await retry(() => oldSousChef.userPools(userAddress, pid));
-        const stakedAmount = userPoolInfo.deposit;
+        let stakedAmount = userPoolInfo.deposit;
 
         const poolInfo = await retry(() => oldSousChef.pools(pid));
 
@@ -341,59 +341,25 @@ async function migrateSC(signer) {
               const userPoolRegular = await retry(() => oldSousChef.getUserPoolRegular(userAddress, pid));
               console.log(`PID ${pid}: getUserPoolRegular result:`, userPoolRegular);
               
-              // Handle different return types from getUserPoolRegular
-              console.log(`PID ${pid}: userPoolRegular type:`, typeof userPoolRegular, 'isArray:', Array.isArray(userPoolRegular));
-              
-              // Convert to string first to handle ethers.js wrapper objects
-              const userPoolRegularStr = userPoolRegular.toString();
-              console.log(`PID ${pid}: userPoolRegular as string:`, userPoolRegularStr);
-              
-              if (userPoolRegularStr.includes(',')) {
-                // If it's a comma-separated string, split and process
-                const stringIds = userPoolRegularStr.split(',').map(s => s.trim());
-                regularIds = stringIds.map((id, index) => {
-                  // Handle very large numbers by using BigInt
-                  try {
-                    const bigId = BigInt(id);
-                    // Extract the index (i) from the composite value
-                    // infoRegular[i] = i + regular.redemptionStart * 1e10 + regular.redemptionEnd * 1e20 + regular.amount * 1e40;
-                    // The index is the remainder when divided by 1e10
-                    const extractedIndex = Number(bigId % BigInt(1e10));
-                    console.log(`PID ${pid}: Extracted index ${extractedIndex} from composite value ${id}`);
-                    return extractedIndex;
-                  } catch (e) {
-                    console.warn(`PID ${pid}: Invalid number in regularIds:`, id);
-                    return 0;
-                  }
-                }).filter(id => id !== 0);
-                console.log(`PID ${pid}: Processed regularIds from string:`, regularIds);
-              } else if (Array.isArray(userPoolRegular)) {
-                // If it's already an array, process it
-                regularIds = userPoolRegular.map(id => {
-                  const numId = typeof id === 'object' && id.toString ? id.toString() : id;
-                  return parseInt(numId, 10);
-                }).filter(id => !isNaN(id));
-                console.log(`PID ${pid}: Processed regularIds from array:`, regularIds);
-              } else {
-                console.warn(`PID ${pid}: getUserPoolRegular returned unexpected format:`, userPoolRegular);
-                regularIds = [];
-              }
-              
               // Filter regularIds based on redemption time constraints
               const currentTimestamp = await retry(() => signer.provider.getBlock('latest').then(block => block.timestamp));
               const validRegularIds = [];
+              stakedAmount = 0n;
               
               console.log(`PID ${pid}: Current timestamp: ${currentTimestamp}`);
               
-              for (const rId of regularIds) {
+              for (let rId = 0; rId < userPoolRegular.length; rId++) {
                 try {
                   // Get userRegular info for this rId
-                  const userRegular = await retry(() => oldSousChef.userRegluars(userAddress, rId));
+                  const userRegular = userPoolRegular[rId];
                   console.log(`PID ${pid}: userRegular for rId ${rId}:`, userRegular);
-                  
-                  const redemptionStart = Number(userRegular.redemptionStart);
-                  const redemptionEnd = Number(userRegular.redemptionEnd);
-                  const amount = BigInt(userRegular.amount);
+                  // Extract data from the composite uint256 value
+                  // Format: i + redemptionStart * 1e10 + redemptionEnd * 1e20 + amount * 1e40
+                  const compositeValue = BigInt(userRegular.toString());
+                  const index = Number(compositeValue % BigInt(1e10));
+                  const redemptionStart = Number((compositeValue / BigInt(1e10)) % BigInt(1e10));
+                  const redemptionEnd = Number((compositeValue / BigInt(1e20)) % BigInt(1e10));
+                  const amount = compositeValue / BigInt(1e40);
                   
                   console.log(`PID ${pid}: rId ${rId} - start: ${redemptionStart}, end: ${redemptionEnd}, amount: ${ethers.formatUnits(amount)}`);
                   
@@ -405,6 +371,7 @@ async function migrateSC(signer) {
                   
                   if (timeInRange && hasAmount) {
                     validRegularIds.push(rId);
+                    stakedAmount += amount;
                     console.log(`PID ${pid}: rId ${rId} is valid`);
                   } else {
                     console.log(`PID ${pid}: rId ${rId} is invalid`);
