@@ -25,6 +25,24 @@ const IParaPair_ABI = [
   "function token1() external view returns (address)"
 ];
 
+// --- Helper function to check if token is LP token ---
+async function isLpToken(tokenAddress, signer) {
+  try {
+    const tokenContract = new ethers.Contract(tokenAddress, [
+      "function token0() external view returns (address)",
+      "function token1() external view returns (address)"
+    ], signer);
+    
+    // Try to call token0() and token1() - if both exist, it's likely an LP token
+    await tokenContract.token0();
+    await tokenContract.token1();
+    return true;
+  } catch (error) {
+    // If either token0() or token1() fails, it's not an LP token
+    return false;
+  }
+}
+
 // --- LocalStorage Persistence Helpers ---
 const getStorageKey = (user, pid, type = "masterchef") => `migration_${type}_${user}_pid_${pid}`;
 
@@ -232,40 +250,55 @@ async function migrateMC(signer) {
       }
 
       // Deposit LP to new MasterChef
-      if (amountToDeposit && amountToDeposit > 0n) {
-        // Check if pool is active (allocPoint > 0)
-        const poolInfo = await retry(() => newMasterChef.poolInfo(pid));
-        if (poolInfo.allocPoint.toString() === '0') {
-          console.log(`PID ${pid}: Pool allocPoint is 0, skipping deposit to new MasterChef`);
+      // Check if pool is active (allocPoint > 0) first
+      const newPoolInfo = await retry(() => newMasterChef.poolInfo(pid));
+      if (newPoolInfo.allocPoint.toString() === '0') {
+        console.log(`PID ${pid}: Pool allocPoint is 0, skipping deposit to new MasterChef`);
+      } else {
+        const lpTokenContract = new ethers.Contract(lpTokenAddress, ERC20_ABI, signer);
+        
+        // Check if token is LP token
+        const isLp = await retry(() => isLpToken(lpTokenAddress, signer));
+        
+        // Check wallet balance before deposit
+        const walletBalance = await retry(() => lpTokenContract.balanceOf(userAddress));
+        
+        // If it's an LP token, use wallet balance instead of calculated amount
+        let actualDepositAmount;
+        if (isLp) {
+          actualDepositAmount = walletBalance;
+          console.log(`PID ${pid}: Token is LP token, using full wallet balance: ${ethers.formatUnits(actualDepositAmount)}`);
         } else {
-          const lpTokenContract = new ethers.Contract(lpTokenAddress, ERC20_ABI, signer);
-          
-          // Check wallet balance before deposit
-          const walletBalance = await retry(() => lpTokenContract.balanceOf(userAddress));
-          const actualDepositAmount = walletBalance < amountToDeposit ? walletBalance : amountToDeposit;
-          
-          if (actualDepositAmount <= 1n) {
-            console.log(`PID ${pid}: Wallet balance is <= 1, skipping deposit to new MasterChef`);
+          // For non-LP tokens, only deposit if we have a calculated amount
+          if (!amountToDeposit || amountToDeposit <= 0n) {
+            console.log(`PID ${pid}: Token is not LP token and no calculated amount, skipping deposit to new MasterChef`);
             continue;
           }
-          
-          console.log(`PID ${pid}: Wallet balance: ${ethers.formatUnits(walletBalance)}, intended deposit: ${ethers.formatUnits(amountToDeposit)}, actual deposit: ${ethers.formatUnits(actualDepositAmount)}`);
-          
-          // Check current allowance
-          const currentAllowance = await retry(() => lpTokenContract.allowance(userAddress, NEW_MASTERCHEF_ADDRESS));
-          if (currentAllowance < actualDepositAmount) {
-            console.log(`PID ${pid}: Current allowance ${ethers.formatUnits(currentAllowance)} is insufficient, approving...`);
-            await send(
-              () => lpTokenContract.approve(NEW_MASTERCHEF_ADDRESS, ethers.MaxUint256)
-            );
-          } else {
-            console.log(`PID ${pid}: Current allowance ${ethers.formatUnits(currentAllowance)} is sufficient, skipping approve`);
-          }
-          
-          await send(
-            () => newMasterChef.deposit(pid, actualDepositAmount)
-          );
+          actualDepositAmount = walletBalance < amountToDeposit ? walletBalance : amountToDeposit;
+          console.log(`PID ${pid}: Token is not LP token, using calculated amount: ${ethers.formatUnits(actualDepositAmount)}`);
         }
+        
+        if (actualDepositAmount <= 1n) {
+          console.log(`PID ${pid}: Wallet balance is <= 1, skipping deposit to new MasterChef`);
+          continue;
+        }
+        
+        console.log(`PID ${pid}: Wallet balance: ${ethers.formatUnits(walletBalance)}, intended deposit: ${ethers.formatUnits(amountToDeposit || 0n)}, actual deposit: ${ethers.formatUnits(actualDepositAmount)}`);
+        
+        // Check current allowance
+        const currentAllowance = await retry(() => lpTokenContract.allowance(userAddress, NEW_MASTERCHEF_ADDRESS));
+        if (currentAllowance < actualDepositAmount) {
+          console.log(`PID ${pid}: Current allowance ${ethers.formatUnits(currentAllowance)} is insufficient, approving...`);
+          await send(
+            () => lpTokenContract.approve(NEW_MASTERCHEF_ADDRESS, ethers.MaxUint256)
+          );
+        } else {
+          console.log(`PID ${pid}: Current allowance ${ethers.formatUnits(currentAllowance)} is sufficient, skipping approve`);
+        }
+        
+        await send(
+          () => newMasterChef.deposit(pid, actualDepositAmount)
+        );
       }
 
       clearPending(userAddress, pid, "masterchef");
@@ -463,45 +496,69 @@ async function migrateSC(signer) {
         }
       }
 
-      // Deposit to New SousChef if there's an amount to deposit
-      if (amountToDeposit && amountToDeposit > 0n) {
-        // Special handling for PID 22: deposit to PID 54 instead
-        const targetPid = pid === 22 ? 54 : pid;
+      // Deposit to New SousChef
+      // Special handling for PID 22: deposit to PID 54 instead
+      const targetPid = pid === 22 ? 54 : pid;
+      
+      // Check if pool is active (allocPoint > 0)
+      const newPoolInfo = await retry(() => newSousChef.pools(targetPid));
+      if (newPoolInfo.allocPoint.toString() === '0') {
+        console.log(`PID ${pid}: Target pool ${targetPid} allocPoint is 0, skipping deposit to new SousChef`);
+      } else {
+        // Get token address from old pool info if not already available
+        if (!tokenAddress) {
+          const oldPoolInfo = await retry(() => oldSousChef.pools(pid));
+          tokenAddress = oldPoolInfo.token;
+        }
         
-        // Check if pool is active (allocPoint > 0)
-        const poolInfo = await retry(() => newSousChef.pools(targetPid));
-        if (poolInfo.allocPoint.toString() === '0') {
-          console.log(`PID ${pid}: Target pool ${targetPid} allocPoint is 0, skipping deposit to new SousChef`);
+        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+        
+        // Check if token is LP token (exclude PID 22)
+        let isLp = false;
+        if (pid !== 22) {
+          isLp = await retry(() => isLpToken(tokenAddress, signer));
+        }
+        
+        // Check wallet balance before deposit
+        const walletBalance = await retry(() => tokenContract.balanceOf(userAddress));
+        
+        // If it's an LP token and not PID 22, use wallet balance instead of calculated amount
+        let actualDepositAmount;
+        if (isLp && pid !== 22) {
+          actualDepositAmount = walletBalance;
+          console.log(`PID ${pid}: Token is LP token (not PID 22), using full wallet balance: ${ethers.formatUnits(actualDepositAmount)}`);
         } else {
-          const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-          
-          // Check wallet balance before deposit
-          const walletBalance = await retry(() => tokenContract.balanceOf(userAddress));
-          const actualDepositAmount = walletBalance < amountToDeposit ? walletBalance : amountToDeposit;
-          
-          if (actualDepositAmount <= 1n) {
-            console.log(`PID ${pid}: Wallet balance is <= 1, skipping deposit to new SousChef`);
+          // For non-LP tokens or PID 22, only deposit if we have a calculated amount
+          if (!amountToDeposit || amountToDeposit <= 0n) {
+            console.log(`PID ${pid}: Token is not LP token or is PID 22, and no calculated amount, skipping deposit to new SousChef`);
             continue;
           }
-          
-          console.log(`PID ${pid}: Wallet balance: ${ethers.formatUnits(walletBalance)}, intended deposit: ${ethers.formatUnits(amountToDeposit)}, actual deposit: ${ethers.formatUnits(actualDepositAmount)}`);
-          
-          // Check current allowance
-          const currentAllowance = await retry(() => tokenContract.allowance(userAddress, NEW_SOUSCHEF_ADDRESS));
-          if (currentAllowance < actualDepositAmount) {
-            console.log(`PID ${pid}: Current allowance ${ethers.formatUnits(currentAllowance)} is insufficient, approving...`);
-            await send(
-              () => tokenContract.approve(NEW_SOUSCHEF_ADDRESS, ethers.MaxUint256)
-            );
-          } else {
-            console.log(`PID ${pid}: Current allowance ${ethers.formatUnits(currentAllowance)} is sufficient, skipping approve`);
-          }
-
-          await send(
-            () => newSousChef.deposit(targetPid, actualDepositAmount, ["0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 0])
-          );
-          console.log(`PID ${pid}: Deposit to new SousChef pool ${targetPid} complete.`);
+          actualDepositAmount = walletBalance < amountToDeposit ? walletBalance : amountToDeposit;
+          console.log(`PID ${pid}: Token is not LP token or is PID 22, using calculated amount: ${ethers.formatUnits(actualDepositAmount)}`);
         }
+        
+        if (actualDepositAmount <= 1n) {
+          console.log(`PID ${pid}: Wallet balance is <= 1, skipping deposit to new SousChef`);
+          continue;
+        }
+        
+        console.log(`PID ${pid}: Wallet balance: ${ethers.formatUnits(walletBalance)}, intended deposit: ${ethers.formatUnits(amountToDeposit || 0n)}, actual deposit: ${ethers.formatUnits(actualDepositAmount)}`);
+        
+        // Check current allowance
+        const currentAllowance = await retry(() => tokenContract.allowance(userAddress, NEW_SOUSCHEF_ADDRESS));
+        if (currentAllowance < actualDepositAmount) {
+          console.log(`PID ${pid}: Current allowance ${ethers.formatUnits(currentAllowance)} is insufficient, approving...`);
+          await send(
+            () => tokenContract.approve(NEW_SOUSCHEF_ADDRESS, ethers.MaxUint256)
+          );
+        } else {
+          console.log(`PID ${pid}: Current allowance ${ethers.formatUnits(currentAllowance)} is sufficient, skipping approve`);
+        }
+
+        await send(
+          () => newSousChef.deposit(targetPid, actualDepositAmount, ["0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 0])
+        );
+        console.log(`PID ${pid}: Deposit to new SousChef pool ${targetPid} complete.`);
       }
       
       // Calculate final rewards AFTER funds migration is complete
